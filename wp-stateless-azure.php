@@ -3,7 +3,7 @@
  * Plugin Name: WP Stateless Azure
  * Plugin URI:  https://github.com/udx/wp-stateless-azure
  * Description: A minimal wp-stateless, native to Azure: uploads land in Azure Blob Storage and are served from the blob endpoint (or your CDN in front of it), so hosts stay disposable while WordPress keeps its normal local-file flow. wp-stateless's behavior model - modes, URL/srcset rewrite, delete mirroring, bulk sync - with zero vendor libraries. Works as a regular plugin or a must-use plugin.
- * Version:     1.0.0
+ * Version:     1.0.1
  * Author:      UDX
  * License:     GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -329,6 +329,13 @@ function wp_stateless_azure_srcset( $sources, $size_array, $image_src, $image_me
 	$dir    = dirname( $image_meta['file'] );
 	$prefix = '.' === $dir ? '' : $dir . '/';
 	foreach ( $sources as $width => $source ) {
+		// The full-size source is the BASE file itself - it is never listed in
+		// `sizes`, so width-matching alone misses it and the widest source
+		// keeps pointing at the pod (a 404 in ephemeral mode).
+		if ( isset( $image_meta['width'] ) && (int) $image_meta['width'] === (int) $width ) {
+			$sources[ $width ]['url'] = wp_stateless_azure_base_url() . '/' . $image_meta['file'];
+			continue;
+		}
 		foreach ( $image_meta['sizes'] as $size ) {
 			if ( ! empty( $size['file'] ) && isset( $size['width'] ) && (int) $size['width'] === (int) $width ) {
 				$sources[ $width ]['url'] = wp_stateless_azure_base_url() . '/' . $prefix . $size['file'];
